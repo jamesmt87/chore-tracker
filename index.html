@@ -131,6 +131,150 @@
   </style>
 </head>
 <body>
-  <!-- Main container and all existing script content goes here -->
+  <div class="container">
+    <div class="child-panel" id="annabel-panel">
+      <h2>Annabel</h2>
+      <div class="section-title">Paid Chores</div>
+      <ul id="annabel-paid-list"></ul>
+
+      <div class="section-title">Required Chores</div>
+      <ul id="annabel-required-list"></ul>
+
+      <div class="total">Total: $<span id="annabel-total">0</span></div>
+      <div class="lifetime">Lifetime: $<span id="annabel-lifetime">0</span></div>
+
+      <div class="manual-adjust">
+        <button onclick="adjust('annabel', 1)">➕</button>
+        <button onclick="adjust('annabel', -1)">➖</button>
+        <button onclick="markPaid('annabel')">💰 Paid</button>
+      </div>
+
+      <div class="admin-panel" id="annabel-admin">
+        <input type="number" id="annabel-edit-total" placeholder="Total $">
+        <input type="number" id="annabel-edit-lifetime" placeholder="Lifetime $">
+        <button onclick="applyEdits('annabel')">Save</button>
+      </div>
+    </div>
+
+    <div class="child-panel" id="amelia-panel">
+      <h2>Amelia</h2>
+      <div class="section-title">Paid Chores</div>
+      <ul id="amelia-paid-list"></ul>
+
+      <div class="section-title">Required Chores</div>
+      <ul id="amelia-required-list"></ul>
+
+      <div class="total">Total: $<span id="amelia-total">0</span></div>
+      <div class="lifetime">Lifetime: $<span id="amelia-lifetime">0</span></div>
+
+      <div class="manual-adjust">
+        <button onclick="adjust('amelia', 1)">➕</button>
+        <button onclick="adjust('amelia', -1)">➖</button>
+        <button onclick="markPaid('amelia')">💰 Paid</button>
+      </div>
+
+      <div class="admin-panel" id="amelia-admin">
+        <input type="number" id="amelia-edit-total" placeholder="Total $">
+        <input type="number" id="amelia-edit-lifetime" placeholder="Lifetime $">
+        <button onclick="applyEdits('amelia')">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chores = {
+      annabel: {
+        paid: ["Make Bed", "Unload Dishwasher", "Feed Dog"],
+        required: ["Brush Teeth", "Homework", "Clean Room"]
+      },
+      amelia: {
+        paid: ["Pick Up Toys", "Help Set Table", "Wipe Counters"],
+        required: ["Brush Teeth", "Read Book", "Put Clothes Away"]
+      }
+    };
+
+    function getTodayKey(child, list) {
+      const today = new Date().toISOString().split('T')[0];
+      return `${child}_${list}_${today}`;
+    }
+
+    function getKey(child, type) {
+      return `${child}_${type}`;
+    }
+
+    function saveData(child, type, value) {
+      localStorage.setItem(getKey(child, type), value);
+    }
+
+    function loadData(child, type) {
+      return parseFloat(localStorage.getItem(getKey(child, type)) || "0");
+    }
+
+    function renderList(child, type) {
+      const ul = document.getElementById(`${child}-${type}-list`);
+      ul.innerHTML = "";
+      chores[child][type].forEach((chore, i) => {
+        const key = getTodayKey(child, `${type}_${i}`);
+        const checked = localStorage.getItem(key) === "true";
+        const li = document.createElement("li");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = checked;
+        checkbox.addEventListener("change", () => {
+          localStorage.setItem(key, checkbox.checked);
+          if (type === "paid" && checkbox.checked) {
+            const total = loadData(child, "total") + 1;
+            saveData(child, "total", total);
+            document.getElementById(`${child}-total`).textContent = total;
+          }
+        });
+        li.appendChild(checkbox);
+        li.appendChild(document.createTextNode(chore));
+        ul.appendChild(li);
+      });
+    }
+
+    function adjust(child, delta) {
+      const total = Math.max(0, loadData(child, "total") + delta);
+      saveData(child, "total", total);
+      document.getElementById(`${child}-total`).textContent = total;
+    }
+
+    function markPaid(child) {
+      const total = loadData(child, "total");
+      const lifetime = loadData(child, "lifetime") + total;
+      saveData(child, "total", 0);
+      saveData(child, "lifetime", lifetime);
+      document.getElementById(`${child}-total`).textContent = 0;
+      document.getElementById(`${child}-lifetime`).textContent = lifetime;
+    }
+
+    function applyEdits(child) {
+      const total = parseFloat(document.getElementById(`${child}-edit-total`).value) || 0;
+      const lifetime = parseFloat(document.getElementById(`${child}-edit-lifetime`).value) || 0;
+      saveData(child, "total", total);
+      saveData(child, "lifetime", lifetime);
+      document.getElementById(`${child}-total`).textContent = total;
+      document.getElementById(`${child}-lifetime`).textContent = lifetime;
+    }
+
+    function loadAll() {
+      ["annabel", "amelia"].forEach(child => {
+        renderList(child, "paid");
+        renderList(child, "required");
+        document.getElementById(`${child}-total`).textContent = loadData(child, "total");
+        document.getElementById(`${child}-lifetime`).textContent = loadData(child, "lifetime");
+      });
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.shiftKey && e.key.toLowerCase() === "l") {
+        document.getElementById("annabel-admin").style.display = "block";
+        document.getElementById("amelia-admin").style.display = "block";
+      }
+    });
+
+    loadAll();
+  </script>
 </body>
 </html>
