@@ -152,11 +152,19 @@
         const ref = doc(db, "users", user);
         const snap = await getDoc(ref);
         if (snap.exists()) {
-          userData = snap.data();
+          const data = snap.data();
+          userData = JSON.parse(JSON.stringify({
+            total: data.total ?? 0,
+            lifetime: data.lifetime ?? 0,
+            lastReset: data.lastReset ?? todayStr,
+            paidChores: data.paidChores ?? [],
+            requiredChores: data.requiredChores ?? []
+          }));
 
           if (userData.lastReset !== todayStr) {
             userData.paidChores.forEach((c) => (c.checked = false));
             userData.requiredChores.forEach((c) => (c.checked = false));
+            userData.lastReset = todayStr;
             await updateDoc(ref, {
               paidChores: userData.paidChores,
               requiredChores: userData.requiredChores,
