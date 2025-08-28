@@ -87,6 +87,21 @@
     .manual-adjust button:hover {
       background-color: #00a2d8;
     }
+
+    .admin-panel {
+      display: none;
+      margin-top: 10px;
+      background: rgba(255,255,255,0.1);
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .admin-panel input {
+      width: 80px;
+      padding: 4px;
+      margin-right: 10px;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
@@ -102,6 +117,10 @@
         <button onclick="adjustTotal('annabel', 1)">+</button>
         <button onclick="markPaid('annabel')">Paid</button>
       </div>
+      <div class="admin-panel" id="annabel-admin">
+        <label>Set Total: <input type="number" id="annabel-total-input"> <button onclick="saveAdmin('annabel','total')">Save</button></label><br>
+        <label>Set Lifetime: <input type="number" id="annabel-lifetime-input"> <button onclick="saveAdmin('annabel','lifetime')">Save</button></label>
+      </div>
       <div class="section-title">Required Chores</div>
       <ul id="annabel-required"></ul>
     </div>
@@ -116,6 +135,10 @@
         <button onclick="adjustTotal('amelia', -1)">−</button>
         <button onclick="adjustTotal('amelia', 1)">+</button>
         <button onclick="markPaid('amelia')">Paid</button>
+      </div>
+      <div class="admin-panel" id="amelia-admin">
+        <label>Set Total: <input type="number" id="amelia-total-input"> <button onclick="saveAdmin('amelia','total')">Save</button></label><br>
+        <label>Set Lifetime: <input type="number" id="amelia-lifetime-input"> <button onclick="saveAdmin('amelia','lifetime')">Save</button></label>
       </div>
       <div class="section-title">Required Chores</div>
       <ul id="amelia-required"></ul>
@@ -273,6 +296,33 @@
       totalDisplay.textContent = formatCurrency(0);
       lifetimeDisplay.textContent = `Lifetime: ${formatCurrency(lifetime)}`;
     }
+
+    function saveAdmin(name, type) {
+      const earningsKey = getEarningsKey(name);
+      const lifetimeKey = getLifetimeKey(name);
+      const totalDisplay = document.getElementById(`${name}-total`);
+      const lifetimeDisplay = document.getElementById(`${name}-lifetime`);
+
+      if (type === 'total') {
+        const newTotal = parseFloat(document.getElementById(`${name}-total-input`).value);
+        if (!isNaN(newTotal)) {
+          localStorage.setItem(earningsKey, newTotal.toString());
+          totalDisplay.textContent = formatCurrency(newTotal);
+        }
+      } else if (type === 'lifetime') {
+        const newLifetime = parseFloat(document.getElementById(`${name}-lifetime-input`).value);
+        if (!isNaN(newLifetime)) {
+          localStorage.setItem(lifetimeKey, newLifetime.toString());
+          lifetimeDisplay.textContent = `Lifetime: ${formatCurrency(newLifetime)}`;
+        }
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.shiftKey && e.key === 'L') {
+        document.querySelectorAll('.admin-panel').forEach(panel => panel.style.display = 'block');
+      }
+    });
 
     children.forEach(loadChild);
   </script>
