@@ -1,280 +1,211 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Annabel & Amelia's Chore Tracker</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chore Tracker</title>
   <style>
-    html, body {
-      background: transparent;
+    body {
       margin: 0;
-      padding: 20px;
-      font-family: 'Montserrat', sans-serif;
-      color: #f0f0f0;
-      overflow: hidden;
-      width: 100vw;
-      height: 100vh;
-      box-sizing: border-box;
-    }
-
-    h2 {
-      font-weight: 600;
-      font-size: 40px;
-      margin: 10px 0 5px;
-      color: #dddddd;
-      text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
-    }
-
-    .container {
+      padding: 1rem;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: rgba(255, 255, 255, 0.6);
+      color: #333;
+      font-size: 1.5rem;
       display: flex;
+      flex-direction: row;
+      gap: 4rem;
       flex-wrap: wrap;
       justify-content: center;
-      align-items: flex-start;
+    }
+    .child {
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 480px;
       width: 100%;
-      max-width: 100%;
-      box-sizing: border-box;
     }
-
-    .child-panel {
-      flex: 1 1 400px;
-      max-width: 500px;
-      padding: 10px;
+    h2 {
+      text-align: center;
+      margin-bottom: 1rem;
     }
-
-    .section-title {
-      font-size: 24px;
-      margin-top: 10px;
-      margin-bottom: 5px;
-      color: #cccccc;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    .money {
+      font-size: 2rem;
+      text-align: center;
     }
-
-    .total, .lifetime {
-      font-size: 34px;
-      margin: 5px 0;
-      color: #e0e0e0;
-      text-shadow: 0 0 10px rgba(0,0,0,0.4);
-    }
-
     ul {
       list-style: none;
       padding: 0;
-      margin: 0 auto 15px;
-      max-width: 320px;
-      text-align: left;
     }
-
     li {
-      font-size: 22px;
-      margin: 8px 0;
+      margin: 0.5rem 0;
     }
-
     input[type="checkbox"] {
-      transform: scale(1.4);
-      margin-right: 12px;
+      transform: scale(1.5);
+      margin-right: 0.75rem;
     }
-
-    .manual-adjust {
-      margin: 10px 0 20px;
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem 0;
     }
-
-    .manual-adjust button {
-      padding: 6px 14px;
-      font-size: 20px;
-      font-weight: 600;
-      margin: 0 5px;
-      border-radius: 6px;
-      border: none;
-      background-color: #444;
-      color: white;
+    button {
+      font-size: 1.5rem;
+      padding: 0.5rem 1.25rem;
       cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      border-radius: 0.5rem;
+      border: none;
+      background-color: #0077cc;
+      color: white;
     }
-
-    .manual-adjust button:hover {
-      background-color: #666;
+    button:hover {
+      background-color: #005fa3;
     }
-
     .admin-panel {
       display: none;
-      margin-top: 10px;
-      background: rgba(255,255,255,0.05);
-      padding: 10px;
-      border-radius: 8px;
+      margin-top: 2rem;
+      border-top: 1px solid #ccc;
+      padding-top: 1rem;
     }
-
     .admin-panel input {
-      width: 80px;
-      padding: 6px;
-      margin-right: 10px;
-      font-size: 16px;
-      background: #222;
-      color: #fff;
-      border: 1px solid #555;
+      font-size: 1rem;
+      width: 4rem;
+      text-align: center;
+      margin-left: 0.5rem;
     }
-
-    .admin-panel button {
-      padding: 5px 10px;
-      font-size: 16px;
-      font-weight: 500;
-      background-color: #555;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .admin-panel button:hover {
-      background-color: #777;
+    .section-title {
+      margin-top: 1rem;
+      font-weight: bold;
+      font-size: 1.2rem;
     }
   </style>
-</head>
-<body>
-  <div class="container">
-    <div class="child-panel" id="annabel-panel">
-      <h2>Annabel</h2>
-      <div class="section-title">Paid Chores</div>
-      <ul id="annabel-paid-list"></ul>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-      <div class="section-title">Required Chores</div>
-      <ul id="annabel-required-list"></ul>
-
-      <div class="total">Total: $<span id="annabel-total">0</span></div>
-      <div class="lifetime">Lifetime: $<span id="annabel-lifetime">0</span></div>
-
-      <div class="manual-adjust">
-        <button onclick="adjust('annabel', 1)">➕</button>
-        <button onclick="adjust('annabel', -1)">➖</button>
-        <button onclick="markPaid('annabel')">💰 Paid</button>
-      </div>
-
-      <div class="admin-panel" id="annabel-admin">
-        <input type="number" id="annabel-edit-total" placeholder="Total $">
-        <input type="number" id="annabel-edit-lifetime" placeholder="Lifetime $">
-        <button onclick="applyEdits('annabel')">Save</button>
-      </div>
-    </div>
-
-    <div class="child-panel" id="amelia-panel">
-      <h2>Amelia</h2>
-      <div class="section-title">Paid Chores</div>
-      <ul id="amelia-paid-list"></ul>
-
-      <div class="section-title">Required Chores</div>
-      <ul id="amelia-required-list"></ul>
-
-      <div class="total">Total: $<span id="amelia-total">0</span></div>
-      <div class="lifetime">Lifetime: $<span id="amelia-lifetime">0</span></div>
-
-      <div class="manual-adjust">
-        <button onclick="adjust('amelia', 1)">➕</button>
-        <button onclick="adjust('amelia', -1)">➖</button>
-        <button onclick="markPaid('amelia')">💰 Paid</button>
-      </div>
-
-      <div class="admin-panel" id="amelia-admin">
-        <input type="number" id="amelia-edit-total" placeholder="Total $">
-        <input type="number" id="amelia-edit-lifetime" placeholder="Lifetime $">
-        <button onclick="applyEdits('amelia')">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const chores = {
-      annabel: {
-        paid: ["Make Bed", "Unload Dishwasher", "Feed Dog"],
-        required: ["Brush Teeth", "Homework", "Clean Room"]
-      },
-      amelia: {
-        paid: ["Pick Up Toys", "Help Set Table", "Wipe Counters"],
-        required: ["Brush Teeth", "Read Book", "Put Clothes Away"]
-      }
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGBqJdQoHrxeJWXGtjlXTxHHt_8juMYIM",
+      authDomain: "choretracker-914c4.firebaseapp.com",
+      projectId: "choretracker-914c4",
+      storageBucket: "choretracker-914c4.appspot.com",
+      messagingSenderId: "646442672536",
+      appId: "1:646442672536:web:d20261e0a29ffb3e0bcbed"
     };
 
-    function getTodayKey(child, list) {
-      const today = new Date().toISOString().split('T')[0];
-      return `${child}_${list}_${today}`;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const users = ['annabel', 'amelia'];
+
+    async function loadUser(userId) {
+      const userDoc = doc(db, "users", userId);
+      const snap = await getDoc(userDoc);
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      const container = document.createElement('div');
+      container.className = 'child';
+
+      container.innerHTML = `
+        <h2>${capitalize(userId)}'s Chore Money</h2>
+        <div class="money">Total: $<span id="${userId}-total">${data.total}</span></div>
+        <div class="money">Lifetime: $<span id="${userId}-lifetime">${data.lifetime}</span></div>
+        <div class="buttons">
+          <button onclick="adjust('${userId}', 1)">+</button>
+          <button onclick="adjust('${userId}', -1)">-</button>
+          <button onclick="markPaid('${userId}')">Paid</button>
+        </div>
+
+        <div class="section-title">Paid Chores</div>
+        <ul id="${userId}-paid"></ul>
+
+        <div class="section-title">Required Chores</div>
+        <ul id="${userId}-required"></ul>
+
+        <div class="admin-panel" id="${userId}-admin">
+          <div>Edit Totals:</div>
+          Total: <input type="number" id="${userId}-edit-total" value="${data.total}" />
+          Lifetime: <input type="number" id="${userId}-edit-lifetime" value="${data.lifetime}" />
+          <button onclick="saveEdits('${userId}')">Save</button>
+        </div>
+      `;
+
+      document.body.appendChild(container);
+
+      // Render chore checklists
+      const paidList = document.getElementById(`${userId}-paid`);
+      const requiredList = document.getElementById(`${userId}-required`);
+
+      data.paidChores?.forEach(task => {
+        const li = document.createElement('li');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.onchange = () => updateTotal(userId, cb.checked ? 1 : -1);
+        li.appendChild(cb);
+        li.append(task);
+        paidList.appendChild(li);
+      });
+
+      data.requiredChores?.forEach(task => {
+        const li = document.createElement('li');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        li.appendChild(cb);
+        li.append(task);
+        requiredList.appendChild(li);
+      });
     }
 
-    function getKey(child, type) {
-      return `${child}_${type}`;
+    window.adjust = async (user, amount) => {
+      const ref = doc(db, "users", user);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const newTotal = data.total + amount;
+      await updateDoc(ref, { total: newTotal });
+      document.getElementById(`${user}-total`).innerText = newTotal;
+    };
+
+    window.markPaid = async (user) => {
+      const ref = doc(db, "users", user);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const newLifetime = data.lifetime + data.total;
+      await updateDoc(ref, { lifetime: newLifetime, total: 0 });
+      document.getElementById(`${user}-total`).innerText = 0;
+      document.getElementById(`${user}-lifetime`).innerText = newLifetime;
+    };
+
+    window.saveEdits = async (user) => {
+      const ref = doc(db, "users", user);
+      const total = parseInt(document.getElementById(`${user}-edit-total`).value);
+      const lifetime = parseInt(document.getElementById(`${user}-edit-lifetime`).value);
+      await updateDoc(ref, { total, lifetime });
+      document.getElementById(`${user}-total`).innerText = total;
+      document.getElementById(`${user}-lifetime`).innerText = lifetime;
+    };
+
+    function capitalize(s) {
+      return s.charAt(0).toUpperCase() + s.slice(1);
     }
 
-    function saveData(child, type, value) {
-      localStorage.setItem(getKey(child, type), value);
-    }
-
-    function loadData(child, type) {
-      return parseFloat(localStorage.getItem(getKey(child, type)) || "0");
-    }
-
-    function renderList(child, type) {
-      const ul = document.getElementById(`${child}-${type}-list`);
-      ul.innerHTML = "";
-      chores[child][type].forEach((chore, i) => {
-        const key = getTodayKey(child, `${type}_${i}`);
-        const checked = localStorage.getItem(key) === "true";
-        const li = document.createElement("li");
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = checked;
-        checkbox.addEventListener("change", () => {
-          localStorage.setItem(key, checkbox.checked);
-          if (type === "paid" && checkbox.checked) {
-            const total = loadData(child, "total") + 1;
-            saveData(child, "total", total);
-            document.getElementById(`${child}-total`).textContent = total;
-          }
+    // Secret toggle for admin panel
+    window.addEventListener("keydown", e => {
+      if (e.shiftKey && e.key.toLowerCase() === 'l') {
+        users.forEach(user => {
+          const panel = document.getElementById(`${user}-admin`);
+          panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
         });
-        li.appendChild(checkbox);
-        li.appendChild(document.createTextNode(chore));
-        ul.appendChild(li);
-      });
-    }
-
-    function adjust(child, delta) {
-      const total = Math.max(0, loadData(child, "total") + delta);
-      saveData(child, "total", total);
-      document.getElementById(`${child}-total`).textContent = total;
-    }
-
-    function markPaid(child) {
-      const total = loadData(child, "total");
-      const lifetime = loadData(child, "lifetime") + total;
-      saveData(child, "total", 0);
-      saveData(child, "lifetime", lifetime);
-      document.getElementById(`${child}-total`).textContent = 0;
-      document.getElementById(`${child}-lifetime`).textContent = lifetime;
-    }
-
-    function applyEdits(child) {
-      const total = parseFloat(document.getElementById(`${child}-edit-total`).value) || 0;
-      const lifetime = parseFloat(document.getElementById(`${child}-edit-lifetime`).value) || 0;
-      saveData(child, "total", total);
-      saveData(child, "lifetime", lifetime);
-      document.getElementById(`${child}-total`).textContent = total;
-      document.getElementById(`${child}-lifetime`).textContent = lifetime;
-    }
-
-    function loadAll() {
-      ["annabel", "amelia"].forEach(child => {
-        renderList(child, "paid");
-        renderList(child, "required");
-        document.getElementById(`${child}-total`).textContent = loadData(child, "total");
-        document.getElementById(`${child}-lifetime`).textContent = loadData(child, "lifetime");
-      });
-    }
-
-    window.addEventListener("keydown", (e) => {
-      if (e.shiftKey && e.key.toLowerCase() === "l") {
-        document.getElementById("annabel-admin").style.display = "block";
-        document.getElementById("amelia-admin").style.display = "block";
       }
     });
 
-    loadAll();
+    // Initialize the users
+    users.forEach(loadUser);
   </script>
+</head>
+<body>
 </body>
 </html>
