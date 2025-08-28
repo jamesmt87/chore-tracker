@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Annabel's Chore Tracker</title>
+  <title>Annabel & Amelia's Chore Tracker</title>
   <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     html, body {
@@ -11,140 +11,101 @@
       padding: 0;
       font-family: 'Roboto', sans-serif;
       color: #ffffff;
-      text-align: center;
       transform: scale(0.85);
       transform-origin: top center;
       overflow: hidden;
     }
 
-    h1 {
+    h2 {
       font-family: 'Luckiest Guy', cursive;
-      font-size: 38px;
+      font-size: 28px;
+      margin: 10px 0 5px;
       color: #ffdd57;
-      text-shadow: 2px 2px 8px #000, 0 0 10px #ffcc00;
-      margin-top: 20px;
+      text-shadow: 1px 1px 5px #000, 0 0 10px #ffcc00;
     }
 
-    #total {
-      font-size: 48px;
+    .container {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+    }
+
+    .child-panel {
+      width: 45%;
+      padding: 10px;
+    }
+
+    .section-title {
+      font-size: 22px;
+      margin-top: 10px;
+      margin-bottom: 5px;
+      color: #00ffc8;
+    }
+
+    .total {
+      font-size: 32px;
+      margin: 10px 0;
       color: #00ffc8;
       text-shadow: 0 0 12px rgba(0,255,200,0.7);
-      margin-bottom: 15px;
     }
 
     ul {
       list-style: none;
       padding: 0;
-      margin: 0 auto;
+      margin: 0 auto 15px;
       max-width: 300px;
-    }
-
-    li {
-      font-size: 22px;
-      margin: 10px 0;
       text-align: left;
     }
 
-    label {
-      cursor: pointer;
+    li {
+      font-size: 18px;
+      margin: 6px 0;
     }
 
     input[type="checkbox"] {
-      transform: scale(1.4);
+      transform: scale(1.2);
       margin-right: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>💵 Chore Tracker</h1>
-  <div id="total">$0.00</div>
-  <ul id="chore-list"></ul>
+  <div class="container">
+    <div class="child-panel" id="annabel">
+      <h2>Annabel</h2>
+      <div class="section-title">Paid Chores</div>
+      <ul id="annabel-paid"></ul>
+      <div class="total" id="annabel-total">$0.00</div>
+      <div class="section-title">Required Chores</div>
+      <ul id="annabel-required"></ul>
+    </div>
+
+    <div class="child-panel" id="amelia">
+      <h2>Amelia</h2>
+      <div class="section-title">Paid Chores</div>
+      <ul id="amelia-paid"></ul>
+      <div class="total" id="amelia-total">$0.00</div>
+      <div class="section-title">Required Chores</div>
+      <ul id="amelia-required"></ul>
+    </div>
+  </div>
 
   <script>
-    const chores = [
-      { id: "chore1", name: "Make the bed", value: 1 },
-      { id: "chore2", name: "Take out trash", value: 1 },
-      { id: "chore3", name: "Feed the pet", value: 1 },
-      { id: "chore4", name: "Put away toys", value: 1 },
-      { id: "chore5", name: "Do homework", value: 1 }
-    ];
-
-    const choreList = document.getElementById("chore-list");
-    const totalDisplay = document.getElementById("total");
-
-    function formatCurrency(val) {
-      return val.toLocaleString("en-US", { style: "currency", currency: "USD" });
-    }
-
-    function getTodayKey() {
-      const today = new Date();
-      return `chores_${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
-    }
-
-    function getWeekKey() {
-      const now = new Date();
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay()); // Sunday
-      return `bank_${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
-    }
-
-    let bankKey = getWeekKey();
-    let totalEarned = parseFloat(localStorage.getItem(bankKey)) || 0;
-
-    function updateTotal() {
-      totalDisplay.textContent = formatCurrency(totalEarned);
-    }
-
-    function resetBankIfNewWeek() {
-      const storedKeys = Object.keys(localStorage).filter(k => k.startsWith("bank_"));
-      storedKeys.forEach(k => {
-        if (k !== bankKey) localStorage.removeItem(k);
-      });
-      if (!localStorage.getItem(bankKey)) {
-        totalEarned = 0;
-        localStorage.setItem(bankKey, "0");
-      }
-    }
-
-    function loadChores() {
-      resetBankIfNewWeek();
-      choreList.innerHTML = "";
-      const todayKey = getTodayKey();
-      const completed = JSON.parse(localStorage.getItem(todayKey) || "{}");
-
-      chores.forEach(chore => {
-        const li = document.createElement("li");
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = chore.id;
-        checkbox.checked = completed[chore.id] || false;
-
-        checkbox.addEventListener("change", () => {
-          const isChecked = checkbox.checked;
-          completed[chore.id] = isChecked;
-          localStorage.setItem(todayKey, JSON.stringify(completed));
-          if (isChecked) {
-            totalEarned += chore.value;
-          } else {
-            totalEarned -= chore.value;
-          }
-          localStorage.setItem(bankKey, totalEarned.toString());
-          updateTotal();
-        });
-
-        const label = document.createElement("label");
-        label.htmlFor = chore.id;
-        label.textContent = chore.name;
-
-        li.appendChild(checkbox);
-        li.appendChild(label);
-        choreList.appendChild(li);
-      });
-
-      updateTotal();
-    }
-
-    loadChores();
-  </script>
-</body>
-</html>
+    const children = [
+      {
+        name: 'annabel',
+        paid: [
+          { id: 'ab1', name: 'Make bed', value: 1 },
+          { id: 'ab2', name: 'Empty dishwasher', value: 1 },
+          { id: 'ab3', name: 'Feed dog', value: 1 }
+        ],
+        required: [
+          { id: 'ab4', name: 'Brush teeth' },
+          { id: 'ab5', name: 'Do homework' }
+        ]
+      },
+      {
+        name: 'amelia',
+        paid: [
+          { id: 'am1', name: 'Clean room', value: 1 },
+          { id: 'am2', name: 'Water plants', value: 1 },
+          { id: 'am3', name
