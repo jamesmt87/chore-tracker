@@ -22,6 +22,7 @@
 
     const users = ["annabel", "amelia"];
     const state = {};
+    const checkedMap = {};
 
     function render() {
       const container = document.getElementById("container");
@@ -71,22 +72,29 @@
             const item = document.createElement("div");
             item.className = "chore-item";
 
+            const choreKey = `${user}-${label}-${i}`;
+            if (!(choreKey in checkedMap)) checkedMap[choreKey] = false;
+
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
-            checkbox.id = `${user}-${label}-${i}`;
-
-            checkbox.onchange = async () => {
-              const delta = checkbox.checked ? 1 : -1;
-              if (isPaid) {
-                await updateDoc(doc(db, "users", user), {
-                  total: userData.total + delta
-                });
-              }
-            };
+            checkbox.id = choreKey;
+            checkbox.checked = checkedMap[choreKey];
 
             const labelEl = document.createElement("label");
             labelEl.setAttribute("for", checkbox.id);
             labelEl.textContent = chore;
+
+            checkbox.addEventListener("click", async (e) => {
+              const newState = !checkedMap[choreKey];
+              checkedMap[choreKey] = newState;
+              checkbox.checked = newState;
+              if (isPaid) {
+                const delta = newState ? 1 : -1;
+                await updateDoc(doc(db, "users", user), {
+                  total: state[user].total + delta
+                });
+              }
+            });
 
             item.appendChild(checkbox);
             item.appendChild(labelEl);
@@ -119,6 +127,22 @@
         state[user] = docSnap.data();
         render();
       });
+    });
+
+    document.addEventListener("keydown", async (e) => {
+      if (e.shiftKey && e.key.toLowerCase() === "l") {
+        users.forEach(async (user) => {
+          const docRef = doc(db, "users", user);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            await updateDoc(docRef, {
+              lifetime: data.lifetime + data.total,
+              total: 0
+            });
+          }
+        });
+      }
     });
   </script>
   <style>
