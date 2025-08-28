@@ -42,9 +42,9 @@
       color: #00ffc8;
     }
 
-    .total {
-      font-size: 32px;
-      margin: 10px 0;
+    .total, .lifetime {
+      font-size: 26px;
+      margin: 5px 0;
       color: #00ffc8;
       text-shadow: 0 0 12px rgba(0,255,200,0.7);
     }
@@ -73,7 +73,7 @@
 
     .manual-adjust button {
       padding: 5px 12px;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
       margin: 0 5px;
       border-radius: 8px;
@@ -96,9 +96,11 @@
       <div class="section-title">Paid Chores</div>
       <ul id="annabel-paid"></ul>
       <div class="total" id="annabel-total">$0.00</div>
+      <div class="lifetime" id="annabel-lifetime">Lifetime: $0.00</div>
       <div class="manual-adjust">
         <button onclick="adjustTotal('annabel', -1)">−</button>
         <button onclick="adjustTotal('annabel', 1)">+</button>
+        <button onclick="markPaid('annabel')">Paid</button>
       </div>
       <div class="section-title">Required Chores</div>
       <ul id="annabel-required"></ul>
@@ -109,9 +111,11 @@
       <div class="section-title">Paid Chores</div>
       <ul id="amelia-paid"></ul>
       <div class="total" id="amelia-total">$0.00</div>
+      <div class="lifetime" id="amelia-lifetime">Lifetime: $0.00</div>
       <div class="manual-adjust">
         <button onclick="adjustTotal('amelia', -1)">−</button>
         <button onclick="adjustTotal('amelia', 1)">+</button>
+        <button onclick="markPaid('amelia')">Paid</button>
       </div>
       <div class="section-title">Required Chores</div>
       <ul id="amelia-required"></ul>
@@ -155,25 +159,35 @@
       return `${name}_chores_${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
     }
 
-    function getWeekKey(name) {
-      const now = new Date();
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay());
-      return `${name}_bank_${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
+    function getEarningsKey(name) {
+      return `${name}_current_earnings`;
+    }
+
+    function getLifetimeKey(name) {
+      return `${name}_lifetime_earnings`;
+    }
+
+    function getChoreKey(name) {
+      return `${name}_chore_values`;
     }
 
     function loadChild(child) {
       const paidList = document.getElementById(`${child.name}-paid`);
       const reqList = document.getElementById(`${child.name}-required`);
       const totalDisplay = document.getElementById(`${child.name}-total`);
+      const lifetimeDisplay = document.getElementById(`${child.name}-lifetime`);
 
       const paidKey = getTodayKey(child.name) + '_paid';
       const requiredKey = getTodayKey(child.name) + '_required';
-      const bankKey = getWeekKey(child.name);
+      const earningsKey = getEarningsKey(child.name);
+      const lifetimeKey = getLifetimeKey(child.name);
+      const choreKey = getChoreKey(child.name);
 
       let completedPaid = JSON.parse(localStorage.getItem(paidKey) || '{}');
       let completedRequired = JSON.parse(localStorage.getItem(requiredKey) || '{}');
-      let total = parseFloat(localStorage.getItem(bankKey)) || 0;
+      let earnedFromChores = JSON.parse(localStorage.getItem(choreKey) || '{}');
+      let total = parseFloat(localStorage.getItem(earningsKey)) || 0;
+      let lifetime = parseFloat(localStorage.getItem(lifetimeKey)) || 0;
 
       paidList.innerHTML = '';
       reqList.innerHTML = '';
@@ -190,9 +204,13 @@
           completedPaid[chore.id] = isChecked;
           localStorage.setItem(paidKey, JSON.stringify(completedPaid));
 
-          total += isChecked ? chore.value : -chore.value;
-          localStorage.setItem(bankKey, total.toString());
-          totalDisplay.textContent = formatCurrency(total);
+          if (isChecked && !earnedFromChores[chore.id]) {
+            total += chore.value;
+            earnedFromChores[chore.id] = true;
+            localStorage.setItem(earningsKey, total.toString());
+            localStorage.setItem(choreKey, JSON.stringify(earnedFromChores));
+            totalDisplay.textContent = formatCurrency(total);
+          }
         });
 
         const label = document.createElement('label');
@@ -224,16 +242,36 @@
       });
 
       totalDisplay.textContent = formatCurrency(total);
+      lifetimeDisplay.textContent = `Lifetime: ${formatCurrency(lifetime)}`;
     }
 
     function adjustTotal(name, delta) {
-      const bankKey = getWeekKey(name);
+      const earningsKey = getEarningsKey(name);
       const totalDisplay = document.getElementById(`${name}-total`);
-      let total = parseFloat(localStorage.getItem(bankKey)) || 0;
+      let total = parseFloat(localStorage.getItem(earningsKey)) || 0;
       total += delta;
       if (total < 0) total = 0;
-      localStorage.setItem(bankKey, total.toString());
+      localStorage.setItem(earningsKey, total.toString());
       totalDisplay.textContent = formatCurrency(total);
+    }
+
+    function markPaid(name) {
+      const earningsKey = getEarningsKey(name);
+      const lifetimeKey = getLifetimeKey(name);
+      const choreKey = getChoreKey(name);
+      const totalDisplay = document.getElementById(`${name}-total`);
+      const lifetimeDisplay = document.getElementById(`${name}-lifetime`);
+
+      let total = parseFloat(localStorage.getItem(earningsKey)) || 0;
+      let lifetime = parseFloat(localStorage.getItem(lifetimeKey)) || 0;
+      lifetime += total;
+
+      localStorage.setItem(lifetimeKey, lifetime.toString());
+      localStorage.setItem(earningsKey, "0");
+      localStorage.removeItem(choreKey);
+
+      totalDisplay.textContent = formatCurrency(0);
+      lifetimeDisplay.textContent = `Lifetime: ${formatCurrency(lifetime)}`;
     }
 
     children.forEach(loadChild);
