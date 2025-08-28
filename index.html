@@ -4,15 +4,71 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chore Tracker</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      color: white;
+      background-color: transparent;
+    }
+    .container {
+      display: flex;
+      gap: 60px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .user {
+      min-width: 300px;
+      max-width: 350px;
+    }
+    h2, h3 {
+      margin: 10px 0;
+      font-weight: normal;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+    input[type="checkbox"] {
+      transform: scale(1.5);
+      margin-right: 10px;
+    }
+    button {
+      font-size: 1.2em;
+      margin: 5px;
+    }
+    .totals {
+      margin-top: 10px;
+      font-size: 1.2em;
+    }
+    .editor {
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app"></div>
+
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCGBqJdQoHrxeJWXGtjlXTxHHt_8juMYIM",
       authDomain: "choretracker-914c4.firebaseapp.com",
       projectId: "choretracker-914c4",
-      storageBucket: "choretracker-914c4.firebasestorage.app",
+      storageBucket: "choretracker-914c4.appspot.com",
       messagingSenderId: "646442672536",
       appId: "1:646442672536:web:d20261e0a29ffb3e0bcbed"
     };
@@ -21,223 +77,173 @@
     const db = getFirestore(app);
 
     const users = ["annabel", "amelia"];
-    const state = {};
-    const checkedMap = {};
+    const appContainer = document.getElementById("app");
 
-    function render() {
-      const container = document.getElementById("container");
-      container.innerHTML = "";
+    const todayStr = new Date().toISOString().split("T")[0];
 
-      users.forEach((user) => {
-        const userData = state[user];
-        if (!userData) return;
+    for (let user of users) {
+      const div = document.createElement("div");
+      div.className = "user";
+      appContainer.appendChild(div);
 
-        const wrapper = document.createElement("div");
-        wrapper.className = "user-block";
+      const header = document.createElement("h2");
+      header.textContent = `${user[0].toUpperCase() + user.slice(1)}'s Chore Money`;
+      div.appendChild(header);
 
-        const title = document.createElement("h2");
-        title.textContent = user.charAt(0).toUpperCase() + user.slice(1) + "'s Chore Money";
-        wrapper.appendChild(title);
+      const total = document.createElement("div");
+      const lifetime = document.createElement("div");
+      total.className = "totals";
+      lifetime.className = "totals";
+      div.appendChild(total);
+      div.appendChild(lifetime);
 
-        const total = document.createElement("p");
-        total.innerHTML = `Total: <span class="dollar">$${userData.total}</span>`;
-        wrapper.appendChild(total);
+      const manualControls = document.createElement("div");
+      const plus = document.createElement("button");
+      const minus = document.createElement("button");
+      plus.textContent = "+";
+      minus.textContent = "–";
+      manualControls.appendChild(plus);
+      manualControls.appendChild(minus);
+      div.appendChild(manualControls);
 
-        const lifetime = document.createElement("p");
-        lifetime.innerHTML = `Lifetime: <span class="dollar">$${userData.lifetime}</span>`;
-        wrapper.appendChild(lifetime);
+      const paidHeader = document.createElement("h3");
+      paidHeader.textContent = "Paid Chores";
+      const paidList = document.createElement("ul");
 
-        const btnRow = document.createElement("div");
-        btnRow.className = "button-row";
-        ["+","-"].forEach((symbol) => {
-          const btn = document.createElement("button");
-          btn.textContent = symbol;
-          btn.onclick = async () => {
-            const delta = symbol === "+" ? 1 : -1;
-            await updateDoc(doc(db, "users", user), {
-              total: userData.total + delta
-            });
-          };
-          btnRow.appendChild(btn);
-        });
-        wrapper.appendChild(btnRow);
+      const requiredHeader = document.createElement("h3");
+      requiredHeader.textContent = "Required Chores";
+      const requiredList = document.createElement("ul");
 
-        const choresList = (label, list, isPaid) => {
-          const section = document.createElement("div");
-          const heading = document.createElement("h4");
-          heading.textContent = label;
-          section.appendChild(heading);
+      div.appendChild(paidHeader);
+      div.appendChild(paidList);
+      div.appendChild(requiredHeader);
+      div.appendChild(requiredList);
 
-          list.forEach((chore, i) => {
-            const item = document.createElement("div");
-            item.className = "chore-item";
+      const paidBtn = document.createElement("button");
+      paidBtn.textContent = "Paid";
+      div.appendChild(paidBtn);
 
-            const choreKey = `${user}-${label}-${i}`;
-            if (!(choreKey in checkedMap)) checkedMap[choreKey] = false;
+      const editor = document.createElement("div");
+      editor.className = "editor";
+      const lifetimeInput = document.createElement("input");
+      lifetimeInput.type = "number";
+      const saveBtn = document.createElement("button");
+      saveBtn.textContent = "Save Lifetime";
+      editor.appendChild(document.createTextNode("Edit Lifetime Earnings: "));
+      editor.appendChild(lifetimeInput);
+      editor.appendChild(saveBtn);
+      div.appendChild(editor);
 
-            const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
-            checkbox.id = choreKey;
-            checkbox.checked = checkedMap[choreKey];
+      let userData = {};
 
-            const labelEl = document.createElement("label");
-            labelEl.setAttribute("for", checkbox.id);
-            labelEl.textContent = chore;
+      async function loadUser() {
+        const ref = doc(db, "users", user);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          userData = snap.data();
 
-            checkbox.addEventListener("click", async (e) => {
-              const newState = !checkedMap[choreKey];
-              checkedMap[choreKey] = newState;
-              checkbox.checked = newState;
-              if (isPaid) {
-                const delta = newState ? 1 : -1;
-                await updateDoc(doc(db, "users", user), {
-                  total: state[user].total + delta
-                });
-              }
-            });
-
-            item.appendChild(checkbox);
-            item.appendChild(labelEl);
-            section.appendChild(item);
-          });
-          return section;
-        };
-
-        wrapper.appendChild(choresList("Paid Chores", userData.paidChores, true));
-        wrapper.appendChild(choresList("Required Chores", userData.requiredChores, false));
-
-        const paidBtn = document.createElement("button");
-        paidBtn.textContent = "Paid";
-        paidBtn.className = "paid-btn";
-        paidBtn.onclick = async () => {
-          await updateDoc(doc(db, "users", user), {
-            lifetime: userData.lifetime + userData.total,
-            total: 0
-          });
-        };
-        wrapper.appendChild(paidBtn);
-
-        const adjustLifetime = document.createElement("div");
-        adjustLifetime.className = "edit-lifetime";
-        adjustLifetime.style.display = "none";
-        const lifetimeLabel = document.createElement("label");
-        lifetimeLabel.textContent = `Edit Lifetime:`;
-        const lifetimeInput = document.createElement("input");
-        lifetimeInput.type = "number";
-        lifetimeInput.value = userData.lifetime;
-        const saveBtn = document.createElement("button");
-        saveBtn.textContent = "Save";
-        saveBtn.onclick = async () => {
-          const newVal = parseInt(lifetimeInput.value);
-          if (!isNaN(newVal)) {
-            await updateDoc(doc(db, "users", user), {
-              lifetime: newVal
+          if (userData.lastReset !== todayStr) {
+            // Reset chores
+            userData.paidChores.forEach((c) => (c.checked = false));
+            userData.requiredChores.forEach((c) => (c.checked = false));
+            await updateDoc(ref, {
+              paidChores: userData.paidChores,
+              requiredChores: userData.requiredChores,
+              lastReset: todayStr,
             });
           }
-        };
-        adjustLifetime.appendChild(lifetimeLabel);
-        adjustLifetime.appendChild(lifetimeInput);
-        adjustLifetime.appendChild(saveBtn);
-        wrapper.appendChild(adjustLifetime);
 
-        wrapper.setAttribute("data-user", user);
-        container.appendChild(wrapper);
-      });
-    }
-
-    users.forEach((user) => {
-      const ref = doc(db, "users", user);
-      onSnapshot(ref, (docSnap) => {
-        state[user] = docSnap.data();
-        render();
-      });
-    });
-
-    document.addEventListener("keydown", async (e) => {
-      if (e.shiftKey && e.key.toLowerCase() === "l") {
-        document.querySelectorAll(".edit-lifetime").forEach(el => el.style.display = "block");
+          renderUser();
+        }
       }
-    });
+
+      function renderUser() {
+        total.textContent = `Total: $${userData.total ?? 0}`;
+        lifetime.textContent = `Lifetime: $${userData.lifetime ?? 0}`;
+        lifetimeInput.value = userData.lifetime ?? 0;
+
+        paidList.innerHTML = "";
+        requiredList.innerHTML = "";
+
+        for (let chore of userData.paidChores ?? []) {
+          const li = document.createElement("li");
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = chore.checked;
+
+          cb.addEventListener("change", async () => {
+            chore.checked = cb.checked;
+            userData.total += cb.checked ? 1 : -1;
+            await updateDoc(doc(db, "users", user), {
+              paidChores: userData.paidChores,
+              total: userData.total,
+            });
+            renderUser();
+          });
+
+          li.appendChild(cb);
+          li.appendChild(document.createTextNode(chore.name));
+          paidList.appendChild(li);
+        }
+
+        for (let chore of userData.requiredChores ?? []) {
+          const li = document.createElement("li");
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = chore.checked;
+
+          cb.addEventListener("change", async () => {
+            chore.checked = cb.checked;
+            await updateDoc(doc(db, "users", user), {
+              requiredChores: userData.requiredChores,
+            });
+          });
+
+          li.appendChild(cb);
+          li.appendChild(document.createTextNode(chore.name));
+          requiredList.appendChild(li);
+        }
+      }
+
+      plus.onclick = async () => {
+        userData.total++;
+        await updateDoc(doc(db, "users", user), { total: userData.total });
+        renderUser();
+      };
+
+      minus.onclick = async () => {
+        userData.total--;
+        await updateDoc(doc(db, "users", user), { total: userData.total });
+        renderUser();
+      };
+
+      paidBtn.onclick = async () => {
+        userData.lifetime += userData.total;
+        userData.total = 0;
+        await updateDoc(doc(db, "users", user), {
+          total: 0,
+          lifetime: userData.lifetime,
+        });
+        renderUser();
+      };
+
+      saveBtn.onclick = async () => {
+        const newVal = parseInt(lifetimeInput.value);
+        userData.lifetime = newVal;
+        await updateDoc(doc(db, "users", user), {
+          lifetime: newVal,
+        });
+        renderUser();
+      };
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "L" && e.shiftKey) {
+          editor.style.display = editor.style.display === "block" ? "none" : "block";
+        }
+      });
+
+      loadUser();
+    }
   </script>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: transparent;
-      color: #eee;
-      padding: 2em;
-    }
-    #container {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 3em;
-      flex-wrap: wrap;
-    }
-    .user-block {
-      background: none;
-      border: none;
-      padding: 1em;
-      width: 260px;
-    }
-    h2 {
-      font-size: 1.3em;
-      margin-bottom: 0.5em;
-      color: #ffda77;
-      text-align: center;
-    }
-    .button-row button, .paid-btn {
-      font-size: 1.2em;
-      padding: 0.4em 0.8em;
-      margin: 0.4em;
-      border: none;
-      border-radius: 8px;
-      background-color: #444;
-      color: #fff;
-      cursor: pointer;
-    }
-    .button-row {
-      margin: 0.5em 0;
-      display: flex;
-      justify-content: center;
-    }
-    .chore-item {
-      display: flex;
-      align-items: center;
-      margin-bottom: 0.3em;
-    }
-    .chore-item label {
-      margin-left: 0.5em;
-      font-size: 0.95em;
-    }
-    .dollar {
-      font-weight: bold;
-      color: #90ee90;
-    }
-    h4 {
-      margin-top: 0.8em;
-      color: #aad;
-    }
-    .paid-btn {
-      margin-top: 0.6em;
-      background-color: #0066cc;
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .edit-lifetime {
-      margin-top: 0.8em;
-      text-align: center;
-    }
-    .edit-lifetime input {
-      width: 60px;
-      margin: 0 0.5em;
-    }
-    p {
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <div id="container"></div>
 </body>
 </html>
