@@ -117,6 +117,30 @@
         };
         wrapper.appendChild(paidBtn);
 
+        const adjustLifetime = document.createElement("div");
+        adjustLifetime.className = "edit-lifetime";
+        adjustLifetime.style.display = "none";
+        const lifetimeLabel = document.createElement("label");
+        lifetimeLabel.textContent = `Edit Lifetime:`;
+        const lifetimeInput = document.createElement("input");
+        lifetimeInput.type = "number";
+        lifetimeInput.value = userData.lifetime;
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "Save";
+        saveBtn.onclick = async () => {
+          const newVal = parseInt(lifetimeInput.value);
+          if (!isNaN(newVal)) {
+            await updateDoc(doc(db, "users", user), {
+              lifetime: newVal
+            });
+          }
+        };
+        adjustLifetime.appendChild(lifetimeLabel);
+        adjustLifetime.appendChild(lifetimeInput);
+        adjustLifetime.appendChild(saveBtn);
+        wrapper.appendChild(adjustLifetime);
+
+        wrapper.setAttribute("data-user", user);
         container.appendChild(wrapper);
       });
     }
@@ -131,17 +155,7 @@
 
     document.addEventListener("keydown", async (e) => {
       if (e.shiftKey && e.key.toLowerCase() === "l") {
-        users.forEach(async (user) => {
-          const docRef = doc(db, "users", user);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            await updateDoc(docRef, {
-              lifetime: data.lifetime + data.total,
-              total: 0
-            });
-          }
-        });
+        document.querySelectorAll(".edit-lifetime").forEach(el => el.style.display = "block");
       }
     });
   </script>
@@ -209,6 +223,14 @@
       display: block;
       margin-left: auto;
       margin-right: auto;
+    }
+    .edit-lifetime {
+      margin-top: 0.8em;
+      text-align: center;
+    }
+    .edit-lifetime input {
+      width: 60px;
+      margin: 0 0.5em;
     }
     p {
       text-align: center;
