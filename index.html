@@ -108,4 +108,96 @@
         paid: [
           { id: 'am1', name: 'Clean room', value: 1 },
           { id: 'am2', name: 'Water plants', value: 1 },
-          { id: 'am3', name
+          { id: 'am3', name: 'Help set table', value: 1 }
+        ],
+        required: [
+          { id: 'am4', name: 'Brush hair' },
+          { id: 'am5', name: 'Pack backpack' }
+        ]
+      }
+    ];
+
+    function formatCurrency(val) {
+      return val.toLocaleString("en-US", { style: "currency", currency: "USD" });
+    }
+
+    function getTodayKey(name) {
+      const today = new Date();
+      return `${name}_chores_${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+    }
+
+    function getWeekKey(name) {
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay());
+      return `${name}_bank_${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
+    }
+
+    function loadChild(child) {
+      const paidList = document.getElementById(`${child.name}-paid`);
+      const reqList = document.getElementById(`${child.name}-required`);
+      const totalDisplay = document.getElementById(`${child.name}-total`);
+
+      const paidKey = getTodayKey(child.name) + '_paid';
+      const requiredKey = getTodayKey(child.name) + '_required';
+      const bankKey = getWeekKey(child.name);
+
+      let completedPaid = JSON.parse(localStorage.getItem(paidKey) || '{}');
+      let completedRequired = JSON.parse(localStorage.getItem(requiredKey) || '{}');
+      let total = parseFloat(localStorage.getItem(bankKey)) || 0;
+
+      paidList.innerHTML = '';
+      reqList.innerHTML = '';
+
+      child.paid.forEach(chore => {
+        const li = document.createElement('li');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = chore.id;
+        checkbox.checked = completedPaid[chore.id] || false;
+
+        checkbox.addEventListener('change', () => {
+          const isChecked = checkbox.checked;
+          completedPaid[chore.id] = isChecked;
+          localStorage.setItem(paidKey, JSON.stringify(completedPaid));
+
+          total += isChecked ? chore.value : -chore.value;
+          localStorage.setItem(bankKey, total.toString());
+          totalDisplay.textContent = formatCurrency(total);
+        });
+
+        const label = document.createElement('label');
+        label.htmlFor = chore.id;
+        label.textContent = chore.name;
+        li.appendChild(checkbox);
+        li.appendChild(label);
+        paidList.appendChild(li);
+      });
+
+      child.required.forEach(chore => {
+        const li = document.createElement('li');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = chore.id;
+        checkbox.checked = completedRequired[chore.id] || false;
+
+        checkbox.addEventListener('change', () => {
+          completedRequired[chore.id] = checkbox.checked;
+          localStorage.setItem(requiredKey, JSON.stringify(completedRequired));
+        });
+
+        const label = document.createElement('label');
+        label.htmlFor = chore.id;
+        label.textContent = chore.name;
+        li.appendChild(checkbox);
+        li.appendChild(label);
+        reqList.appendChild(li);
+      });
+
+      totalDisplay.textContent = formatCurrency(total);
+    }
+
+    children.forEach(loadChild);
+  </script>
+</body>
+</html>
