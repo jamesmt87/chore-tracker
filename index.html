@@ -4,92 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chore Tracker</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 1rem;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: rgba(255, 255, 255, 0.6);
-      color: #333;
-      font-size: 1.5rem;
-      display: flex;
-      flex-direction: row;
-      gap: 4rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .child {
-      background-color: rgba(255, 255, 255, 0.8);
-      border-radius: 1rem;
-      padding: 2rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      max-width: 480px;
-      width: 100%;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 1rem;
-    }
-    .money {
-      font-size: 2rem;
-      text-align: center;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      margin: 0.5rem 0;
-    }
-    input[type="checkbox"] {
-      transform: scale(1.5);
-      margin-right: 0.75rem;
-    }
-    .buttons {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      margin: 1rem 0;
-    }
-    button {
-      font-size: 1.5rem;
-      padding: 0.5rem 1.25rem;
-      cursor: pointer;
-      border-radius: 0.5rem;
-      border: none;
-      background-color: #0077cc;
-      color: white;
-    }
-    button:hover {
-      background-color: #005fa3;
-    }
-    .admin-panel {
-      display: none;
-      margin-top: 2rem;
-      border-top: 1px solid #ccc;
-      padding-top: 1rem;
-    }
-    .admin-panel input {
-      font-size: 1rem;
-      width: 4rem;
-      text-align: center;
-      margin-left: 0.5rem;
-    }
-    .section-title {
-      margin-top: 1rem;
-      font-weight: bold;
-      font-size: 1.2rem;
-    }
-  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCGBqJdQoHrxeJWXGtjlXTxHHt_8juMYIM",
       authDomain: "choretracker-914c4.firebaseapp.com",
       projectId: "choretracker-914c4",
-      storageBucket: "choretracker-914c4.appspot.com",
+      storageBucket: "choretracker-914c4.firebasestorage.app",
       messagingSenderId: "646442672536",
       appId: "1:646442672536:web:d20261e0a29ffb3e0bcbed"
     };
@@ -97,115 +20,167 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const users = ['annabel', 'amelia'];
+    const users = ["annabel", "amelia"];
+    const state = {};
 
-    async function loadUser(userId) {
-      const userDoc = doc(db, "users", userId);
-      const snap = await getDoc(userDoc);
-      if (!snap.exists()) return;
-      const data = snap.data();
+    function render() {
+      const container = document.getElementById("container");
+      container.innerHTML = "";
 
-      const container = document.createElement('div');
-      container.className = 'child';
+      users.forEach((user) => {
+        const userData = state[user];
+        if (!userData) return;
 
-      container.innerHTML = `
-        <h2>${capitalize(userId)}'s Chore Money</h2>
-        <div class="money">Total: $<span id="${userId}-total">${data.total}</span></div>
-        <div class="money">Lifetime: $<span id="${userId}-lifetime">${data.lifetime}</span></div>
-        <div class="buttons">
-          <button onclick="adjust('${userId}', 1)">+</button>
-          <button onclick="adjust('${userId}', -1)">-</button>
-          <button onclick="markPaid('${userId}')">Paid</button>
-        </div>
+        const wrapper = document.createElement("div");
+        wrapper.className = "user-block";
 
-        <div class="section-title">Paid Chores</div>
-        <ul id="${userId}-paid"></ul>
+        const title = document.createElement("h2");
+        title.textContent = user.charAt(0).toUpperCase() + user.slice(1) + "'s Chore Money";
+        wrapper.appendChild(title);
 
-        <div class="section-title">Required Chores</div>
-        <ul id="${userId}-required"></ul>
+        const total = document.createElement("p");
+        total.innerHTML = `Total: <span class="dollar">$${userData.total}</span>`;
+        wrapper.appendChild(total);
 
-        <div class="admin-panel" id="${userId}-admin">
-          <div>Edit Totals:</div>
-          Total: <input type="number" id="${userId}-edit-total" value="${data.total}" />
-          Lifetime: <input type="number" id="${userId}-edit-lifetime" value="${data.lifetime}" />
-          <button onclick="saveEdits('${userId}')">Save</button>
-        </div>
-      `;
+        const lifetime = document.createElement("p");
+        lifetime.innerHTML = `Lifetime: <span class="dollar">$${userData.lifetime}</span>`;
+        wrapper.appendChild(lifetime);
 
-      document.body.appendChild(container);
-
-      // Render chore checklists
-      const paidList = document.getElementById(`${userId}-paid`);
-      const requiredList = document.getElementById(`${userId}-required`);
-
-      data.paidChores?.forEach(task => {
-        const li = document.createElement('li');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.onchange = () => updateTotal(userId, cb.checked ? 1 : -1);
-        li.appendChild(cb);
-        li.append(task);
-        paidList.appendChild(li);
-      });
-
-      data.requiredChores?.forEach(task => {
-        const li = document.createElement('li');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        li.appendChild(cb);
-        li.append(task);
-        requiredList.appendChild(li);
-      });
-    }
-
-    window.adjust = async (user, amount) => {
-      const ref = doc(db, "users", user);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) return;
-      const data = snap.data();
-      const newTotal = data.total + amount;
-      await updateDoc(ref, { total: newTotal });
-      document.getElementById(`${user}-total`).innerText = newTotal;
-    };
-
-    window.markPaid = async (user) => {
-      const ref = doc(db, "users", user);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) return;
-      const data = snap.data();
-      const newLifetime = data.lifetime + data.total;
-      await updateDoc(ref, { lifetime: newLifetime, total: 0 });
-      document.getElementById(`${user}-total`).innerText = 0;
-      document.getElementById(`${user}-lifetime`).innerText = newLifetime;
-    };
-
-    window.saveEdits = async (user) => {
-      const ref = doc(db, "users", user);
-      const total = parseInt(document.getElementById(`${user}-edit-total`).value);
-      const lifetime = parseInt(document.getElementById(`${user}-edit-lifetime`).value);
-      await updateDoc(ref, { total, lifetime });
-      document.getElementById(`${user}-total`).innerText = total;
-      document.getElementById(`${user}-lifetime`).innerText = lifetime;
-    };
-
-    function capitalize(s) {
-      return s.charAt(0).toUpperCase() + s.slice(1);
-    }
-
-    // Secret toggle for admin panel
-    window.addEventListener("keydown", e => {
-      if (e.shiftKey && e.key.toLowerCase() === 'l') {
-        users.forEach(user => {
-          const panel = document.getElementById(`${user}-admin`);
-          panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+        const btnRow = document.createElement("div");
+        btnRow.className = "button-row";
+        ["+","-"].forEach((symbol) => {
+          const btn = document.createElement("button");
+          btn.textContent = symbol;
+          btn.onclick = async () => {
+            const delta = symbol === "+" ? 1 : -1;
+            await updateDoc(doc(db, "users", user), {
+              total: userData.total + delta
+            });
+          };
+          btnRow.appendChild(btn);
         });
-      }
-    });
+        wrapper.appendChild(btnRow);
 
-    // Initialize the users
-    users.forEach(loadUser);
+        const choresList = (label, list, isPaid) => {
+          const section = document.createElement("div");
+          const heading = document.createElement("h4");
+          heading.textContent = label;
+          section.appendChild(heading);
+
+          list.forEach((chore, i) => {
+            const item = document.createElement("div");
+            item.className = "chore-item";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.id = `${user}-${label}-${i}`;
+
+            checkbox.onchange = async () => {
+              const delta = checkbox.checked ? 1 : -1;
+              if (isPaid) {
+                await updateDoc(doc(db, "users", user), {
+                  total: userData.total + delta
+                });
+              }
+            };
+
+            const labelEl = document.createElement("label");
+            labelEl.setAttribute("for", checkbox.id);
+            labelEl.textContent = chore;
+
+            item.appendChild(checkbox);
+            item.appendChild(labelEl);
+            section.appendChild(item);
+          });
+          return section;
+        };
+
+        wrapper.appendChild(choresList("Paid Chores", userData.paidChores, true));
+        wrapper.appendChild(choresList("Required Chores", userData.requiredChores, false));
+
+        const paidBtn = document.createElement("button");
+        paidBtn.textContent = "Paid";
+        paidBtn.className = "paid-btn";
+        paidBtn.onclick = async () => {
+          await updateDoc(doc(db, "users", user), {
+            lifetime: userData.lifetime + userData.total,
+            total: 0
+          });
+        };
+        wrapper.appendChild(paidBtn);
+
+        container.appendChild(wrapper);
+      });
+    }
+
+    users.forEach((user) => {
+      const ref = doc(db, "users", user);
+      onSnapshot(ref, (docSnap) => {
+        state[user] = docSnap.data();
+        render();
+      });
+    });
   </script>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: transparent;
+      color: #eee;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 1em;
+    }
+    .user-block {
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 16px;
+      padding: 1em;
+      margin: 1em;
+      width: 300px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    h2 {
+      font-size: 1.3em;
+      margin-bottom: 0.5em;
+      color: #ffda77;
+    }
+    .button-row button, .paid-btn {
+      font-size: 1.2em;
+      padding: 0.4em 0.8em;
+      margin: 0.4em;
+      border: none;
+      border-radius: 8px;
+      background-color: #444;
+      color: #fff;
+      cursor: pointer;
+    }
+    .button-row {
+      margin: 0.5em 0;
+    }
+    .chore-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.3em;
+    }
+    .chore-item label {
+      margin-left: 0.5em;
+      font-size: 0.95em;
+    }
+    .dollar {
+      font-weight: bold;
+      color: #90ee90;
+    }
+    h4 {
+      margin-top: 0.8em;
+      color: #aad;
+    }
+    .paid-btn {
+      margin-top: 0.6em;
+      background-color: #0066cc;
+    }
+  </style>
 </head>
 <body>
+  <div id="container"></div>
 </body>
 </html>
