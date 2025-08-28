@@ -134,7 +134,19 @@
       editor.appendChild(saveBtn);
       div.appendChild(editor);
 
-      let userData = {};
+      let userData = {
+        total: 0,
+        lifetime: 0,
+        lastReset: todayStr,
+        paidChores: [
+          { name: "Sweep kitchen", checked: false },
+          { name: "Feed dog", checked: false }
+        ],
+        requiredChores: [
+          { name: "Brush teeth", checked: false },
+          { name: "Make bed", checked: false }
+        ]
+      };
 
       async function loadUser() {
         const ref = doc(db, "users", user);
@@ -143,7 +155,6 @@
           userData = snap.data();
 
           if (userData.lastReset !== todayStr) {
-            // Reset chores
             userData.paidChores.forEach((c) => (c.checked = false));
             userData.requiredChores.forEach((c) => (c.checked = false));
             await updateDoc(ref, {
@@ -152,9 +163,11 @@
               lastReset: todayStr,
             });
           }
-
-          renderUser();
+        } else {
+          await setDoc(ref, userData);
         }
+
+        renderUser();
       }
 
       function renderUser() {
