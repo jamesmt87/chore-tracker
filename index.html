@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Annabel's Chore Tracker</title>
@@ -58,9 +58,7 @@
 <body>
   <h1>💵 Chore Tracker</h1>
   <div id="total">$0.00</div>
-  <ul id="chore-list">
-    <!-- Chores will be populated here -->
-  </ul>
+  <ul id="chore-list"></ul>
 
   <script>
     const chores = [
@@ -100,7 +98,7 @@
     function resetBankIfNewWeek() {
       const storedKeys = Object.keys(localStorage).filter(k => k.startsWith("bank_"));
       storedKeys.forEach(k => {
-        if (k !== bankKey) localStorage.removeItem(k); // clear old weeks
+        if (k !== bankKey) localStorage.removeItem(k);
       });
       if (!localStorage.getItem(bankKey)) {
         totalEarned = 0;
