@@ -102,7 +102,7 @@
 
     const users = ["annabel", "amelia"];
     const state = {};
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = new Date().toLocaleDateString("en-CA"); // Format: YYYY-MM-DD
 
     function getChoreKey(section, index) {
       return `${section}-${index}`;
