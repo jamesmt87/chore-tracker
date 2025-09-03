@@ -100,7 +100,8 @@
 
     const users = ["annabel", "amelia"];
     const state = {};
-    const todayStr = new Date().toLocaleDateString("en-CA"); // Use local date YYYY-MM-DD
+    const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
+    const alreadyResetToday = {};
 
     function getChoreKey(section, index) {
       return `${section}-${index}`;
@@ -137,7 +138,7 @@
             updates.total = state[user].total + (newChecked ? 1 : -1);
           }
           await updateDoc(doc(db, "users", user), updates);
-          await loadAllUsers(); // Refresh after update
+          await loadAllUsers(); // Refresh
         });
 
         item.appendChild(checkbox);
@@ -237,16 +238,23 @@
       const docSnap = await getDoc(ref);
       const data = docSnap.data();
 
-      if (data.lastReset !== todayStr) {
+      if (data.lastReset !== todayStr && !alreadyResetToday[user]) {
+        console.log(`[RESET] Triggering daily reset for ${user}. Firestore: ${data.lastReset}, Local: ${todayStr}`);
+        alreadyResetToday[user] = true;
+
         const resetChores = {};
         for (let key in data.checkedChores || {}) {
           resetChores[`checkedChores.${key}`] = false;
         }
+
         await updateDoc(ref, {
           ...resetChores,
           lastReset: todayStr
         });
-        data.checkedChores = {}; // Will be reloaded next refresh
+
+        // Update local state to reflect reset
+        data.checkedChores = {};
+        data.lastReset = todayStr;
       }
 
       state[user] = data;
@@ -257,13 +265,10 @@
       renderAll();
     }
 
-    // Initial load
-    await loadAllUsers();
+    await loadAllUsers(); // Initial load
 
-    // Refresh every 5 minutes
-    setInterval(loadAllUsers, 5 * 60 * 1000);
+    setInterval(loadAllUsers, 5 * 60 * 1000); // Reload every 5 minutes
 
-    // Show lifetime editor with Shift+L
     document.addEventListener("keydown", (e) => {
       if (e.shiftKey && e.key.toLowerCase() === "l") {
         document.querySelectorAll(".edit-lifetime").forEach(el => el.style.display = "block");
