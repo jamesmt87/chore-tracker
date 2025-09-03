@@ -44,8 +44,6 @@
       cursor: pointer;
     }
     .paid-btn {
-      display: block;
-      margin: 0.6em auto;
       background-color: #0066cc;
     }
     .chore-item {
@@ -84,8 +82,8 @@
     import {
       getFirestore,
       doc,
-      updateDoc,
-      onSnapshot
+      getDoc,
+      updateDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -102,7 +100,7 @@
 
     const users = ["annabel", "amelia"];
     const state = {};
-    const todayStr = new Date().toLocaleDateString("en-CA"); // Format: YYYY-MM-DD
+    const todayStr = new Date().toLocaleDateString("en-CA"); // Use local date YYYY-MM-DD
 
     function getChoreKey(section, index) {
       return `${section}-${index}`;
@@ -139,6 +137,7 @@
             updates.total = state[user].total + (newChecked ? 1 : -1);
           }
           await updateDoc(doc(db, "users", user), updates);
+          await loadAllUsers(); // Refresh after update
         });
 
         item.appendChild(checkbox);
@@ -169,21 +168,19 @@
 
       const buttonRow = document.createElement("div");
       buttonRow.className = "button-row";
-      ["+", "-"].forEach((symbol) => {
+
+      ["-", "+"].forEach((symbol) => {
         const btn = document.createElement("button");
         btn.textContent = symbol;
         btn.onclick = async () => {
           const delta = symbol === "+" ? 1 : -1;
           await updateDoc(doc(db, "users", user), {
-            total: userData.total + delta,
+            total: userData.total + delta
           });
+          await loadAllUsers();
         };
         buttonRow.appendChild(btn);
       });
-      wrapper.appendChild(buttonRow);
-
-      wrapper.appendChild(createChoreSection(user, "Paid Chores", userData.paidChores, true));
-      wrapper.appendChild(createChoreSection(user, "Required Chores", userData.requiredChores, false));
 
       const paidBtn = document.createElement("button");
       paidBtn.className = "paid-btn";
@@ -193,8 +190,13 @@
           lifetime: userData.lifetime + userData.total,
           total: 0
         });
+        await loadAllUsers();
       };
-      wrapper.appendChild(paidBtn);
+      buttonRow.appendChild(paidBtn);
+      wrapper.appendChild(buttonRow);
+
+      wrapper.appendChild(createChoreSection(user, "Paid Chores", userData.paidChores, true));
+      wrapper.appendChild(createChoreSection(user, "Required Chores", userData.requiredChores, false));
 
       const adjustLifetime = document.createElement("div");
       adjustLifetime.className = "edit-lifetime";
@@ -209,6 +211,7 @@
         const newVal = parseInt(lifetimeInput.value);
         if (!isNaN(newVal)) {
           await updateDoc(doc(db, "users", user), { lifetime: newVal });
+          await loadAllUsers();
         }
       };
       adjustLifetime.appendChild(lifetimeLabel);
@@ -229,30 +232,38 @@
       });
     }
 
-    users.forEach((user) => {
+    async function loadUser(user) {
       const ref = doc(db, "users", user);
-      onSnapshot(ref, async (docSnap) => {
-        const data = docSnap.data();
+      const docSnap = await getDoc(ref);
+      const data = docSnap.data();
 
-        // Handle daily reset
-        if (data.lastReset !== todayStr) {
-          const resetChores = {};
-          for (let key in data.checkedChores || {}) {
-            resetChores[`checkedChores.${key}`] = false;
-          }
-          await updateDoc(ref, {
-            ...resetChores,
-            lastReset: todayStr
-          });
-          return;
+      if (data.lastReset !== todayStr) {
+        const resetChores = {};
+        for (let key in data.checkedChores || {}) {
+          resetChores[`checkedChores.${key}`] = false;
         }
+        await updateDoc(ref, {
+          ...resetChores,
+          lastReset: todayStr
+        });
+        data.checkedChores = {}; // Will be reloaded next refresh
+      }
 
-        state[user] = data;
-        renderAll();
-      });
-    });
+      state[user] = data;
+    }
 
-    // Secret key to edit lifetime values
+    async function loadAllUsers() {
+      await Promise.all(users.map(loadUser));
+      renderAll();
+    }
+
+    // Initial load
+    await loadAllUsers();
+
+    // Refresh every 5 minutes
+    setInterval(loadAllUsers, 5 * 60 * 1000);
+
+    // Show lifetime editor with Shift+L
     document.addEventListener("keydown", (e) => {
       if (e.shiftKey && e.key.toLowerCase() === "l") {
         document.querySelectorAll(".edit-lifetime").forEach(el => el.style.display = "block");
